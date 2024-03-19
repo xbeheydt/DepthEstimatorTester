@@ -7,10 +7,24 @@ This app runs a gradio interface for testing Depth estimator AI models.
 import torch
 import gradio as gr
 import sys
+import argparse
 
 title = "# Depth Estimator Model Tester"
 description = "Gradio app for testing **Depth estimator** AI models."
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def cliargs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--public",
+        type=str,
+        default=False,
+        help="Turn on public mode.",
+        type=bool,
+    )
+    return parser.parse_args()
+
 
 # App structure ===============================================================
 with gr.Blocks() as app:
@@ -19,4 +33,5 @@ with gr.Blocks() as app:
 # ! App structure =============================================================
 
 if __name__ == "__main__":
-    sys.exit(app.queue().launch())
+    args = cliargs()
+    sys.exit(app.queue().launch(share=args.public))
