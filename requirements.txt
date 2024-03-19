@@ -1,4 +1,5 @@
 gradio
+matplotlib
 
 # AI tools
 timm==0.6.11
