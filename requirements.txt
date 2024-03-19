@@ -1,0 +1,9 @@
+gradio
+
+# AI tools
+timm==0.6.11
+torch
+torchvision
+
+# For 3D render
+trimesh
