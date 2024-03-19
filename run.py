@@ -4,12 +4,15 @@ Entrypoint of Gradio app
 This app runs a gradio interface for testing Depth estimator AI models.
 """
 
-import torch
-import gradio as gr
-import sys
+from PIL import Image
 import argparse
-import numpy as np
+import gradio as gr
 import matplotlib
+import numpy as np
+import shutil
+import sys
+import tempfile
+import torch
 
 
 TITLE = "# Depth Estimator Model Tester"
@@ -29,6 +32,10 @@ def cliargs():
         action="store_true",
     )
     return parser.parse_args()
+
+
+def infer(model, img):
+    return model.infer_pil(img)
 
 
 def colorize(
@@ -128,23 +135,26 @@ with gr.Blocks() as app:
         clear_color=[1.0, 1.0, 1.0, 1.0],
     )
     execute = gr.Button("Execute", interactive=True)
-    # ! App structure =============================================================
+# ! App structure =============================================================
 
-    # Element Callbacks ===========================================================
+# Element Callbacks ===========================================================
     def choose_model(name):
         return gr.Dropdown(choices=MODEL_OPTIONS[name])
 
     model_name.change(choose_model, model_name, [model_size])
 
     def choose_model_size(name, size):
+        shutil.rmtree(torch.hub.get_dir())
         global MODEL
-        MODEL = torch.hub.load(
-            name,
-            size,
-            pretained=True,
-        ).to(
-            DEVICE
-        ).eval()
+        MODEL = (
+            torch.hub.load(
+                name,
+                size,
+                pretained=True,
+            )
+            .to(DEVICE)
+            .eval()
+        )
         return gr.Button(interactive=True)
 
     model_size.change(
@@ -152,9 +162,22 @@ with gr.Blocks() as app:
         [model_name, model_size],
         [execute],
         show_progress=True,
-        # [MODEL, execute],
     )
 
+    def on_execute(image, cmap):
+        global MODEL
+        depth = infer(MODEL, image)
+        colored_depth = colorize(depth, cmap=cmap)
+        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        raw_depth = Image.fromarray((depth * 256).astype("uint16"))
+        raw_depth.save(tmp.name)
+        return [colored_depth, tmp.name]
+
+    execute.click(
+        on_execute,
+        inputs=[input_image],
+        outputs=[depth_image, raw_file],
+    )
 
 # ! Element Callbacks =========================================================
 
